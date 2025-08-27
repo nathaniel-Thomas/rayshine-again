@@ -1,0 +1,42 @@
+{
+  "name": "rayshine-marketplace",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/customer-website",
+    "apps/provider-portal",
+    "apps/admin-crm",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"customer,provider,admin\" -c \"blue,green,yellow\" \"npm run dev:customer\" \"npm run dev:provider\" \"npm run dev:admin\"",
+    "dev:customer": "cd apps/customer-website && npm run dev",
+    "dev:provider": "cd apps/provider-portal && npm run dev",
+    "dev:admin": "cd apps/admin-crm && npm run dev",
+    "build": "npm run build:shared && npm run build:customer && npm run build:provider && npm run build:admin",
+    "build:shared": "cd packages/shared && npm run build",
+    "build:customer": "cd apps/customer-website && npm run build",
+    "build:provider": "cd apps/provider-portal && npm run build",
+    "build:admin": "cd apps/admin-crm && npm run build",
+    "install:all": "npm install && npm run install:apps",
+    "install:apps": "cd apps/customer-website && npm install && cd ../provider-portal && npm install && cd ../admin-crm && npm install && cd ../../packages/shared && npm install"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vite-plugin-pwa": "^1.0.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.0",
+    "@tailwindcss/postcss": "^4.1.12",
+    "lucide-react": "^0.541.0",
+    "react-big-calendar": "^1.19.4",
+    "react-router-dom": "^7.8.2",
+    "tailwindcss": "^4.1.12",
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.8"
+  }
+}
