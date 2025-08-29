@@ -56,11 +56,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
-    host: true,
-  },
-  preview: {
-    port: 3001,
+    port: 3001, // Assigns port 3001
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
@@ -70,9 +66,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-switch'],
-          charts: ['recharts'],
-          calendar: ['react-big-calendar']
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-switch']
         }
       }
     }

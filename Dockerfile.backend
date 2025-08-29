@@ -1,0 +1,62 @@
+# Multi-stage build for Node.js Backend API
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY apps/backend/package*.json ./apps/backend/
+COPY packages/shared/package*.json ./packages/shared/
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+
+# Copy package files and install all dependencies (including devDependencies)
+COPY package*.json ./
+COPY apps/backend/package*.json ./apps/backend/
+COPY packages/shared/package*.json ./packages/shared/
+RUN npm ci
+
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY apps/backend ./apps/backend
+
+# Build shared package first
+RUN cd packages/shared && npm run build
+
+# Build backend application
+RUN cd apps/backend && npm run build
+
+# Production image
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 rayshine
+RUN adduser --system --uid 1001 rayshine-backend
+
+# Copy built application
+COPY --from=deps --chown=rayshine-backend:rayshine /app/node_modules ./node_modules
+COPY --from=builder --chown=rayshine-backend:rayshine /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder --chown=rayshine-backend:rayshine /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=rayshine-backend:rayshine /app/apps/backend/package*.json ./apps/backend/
+COPY --from=builder --chown=rayshine-backend:rayshine /app/packages/shared/package*.json ./packages/shared/
+
+# Set user
+USER rayshine-backend
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Start the application
+CMD ["node", "apps/backend/dist/index.js"]

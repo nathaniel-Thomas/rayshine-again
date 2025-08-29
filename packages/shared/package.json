@@ -16,11 +16,21 @@
     "clean": "rimraf dist"
   },
   "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@types/node": "^20.0.0",
     "typescript": "^5.2.2",
-    "rimraf": "^5.0.5"
+    "rimraf": "^5.0.5",
+    "vite": "^5.4.2"
   },
   "dependencies": {
     "zod": "^3.22.4",
-    "date-fns": "^2.30.0"
+    "date-fns": "^2.30.0",
+    "@supabase/supabase-js": "^2.56.0",
+    "axios": "^1.6.7",
+    "socket.io-client": "^4.7.4"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
   }
 }

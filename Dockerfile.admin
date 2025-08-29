@@ -1,0 +1,132 @@
+# Multi-stage build for Admin CRM (React/Vite)
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY apps/admin-crm/package*.json ./apps/admin-crm/
+COPY packages/shared/package*.json ./packages/shared/
+
+# Install dependencies
+RUN npm ci && npm cache clean --force
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package*.json ./
+COPY apps/admin-crm/package*.json ./apps/admin-crm/
+COPY packages/shared/package*.json ./packages/shared/
+RUN npm ci
+
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY apps/admin-crm ./apps/admin-crm
+
+# Build shared package first
+RUN cd packages/shared && npm run build
+
+# Build admin CRM
+ENV NODE_ENV=production
+RUN cd apps/admin-crm && npm run build
+
+# Production image with nginx
+FROM nginx:alpine AS runner
+
+# Copy nginx configuration with enhanced security for admin panel
+COPY <<EOF /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Enhanced security for admin panel
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:;" always;
+    
+    # Enable gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Handle client-side routing
+    location / {
+        try_files \$uri \$uri/ /index.html;
+        
+        # Additional security for admin routes
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    }
+
+    # Restrict access to sensitive files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # API proxy for admin operations (if needed)
+    location /api/ {
+        proxy_pass http://backend:3001/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # Security headers for API calls
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # Rate limiting for admin panel
+    limit_req_zone \$binary_remote_addr zone=admin:10m rate=10r/m;
+    limit_req zone=admin burst=5 nodelay;
+}
+EOF
+
+# Copy built application
+COPY --from=builder /app/apps/admin-crm/dist /usr/share/nginx/html
+
+# Create non-root user
+RUN addgroup -g 1001 -S rayshine && \
+    adduser -S rayshine -u 1001
+
+# Set permissions
+RUN chown -R rayshine:rayshine /usr/share/nginx/html && \
+    chown -R rayshine:rayshine /var/cache/nginx && \
+    chown -R rayshine:rayshine /var/log/nginx && \
+    chown -R rayshine:rayshine /etc/nginx/conf.d
+RUN touch /var/run/nginx.pid && \
+    chown -R rayshine:rayshine /var/run/nginx.pid
+
+# Switch to non-root user
+USER rayshine
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

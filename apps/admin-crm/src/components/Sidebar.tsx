@@ -21,13 +21,12 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'payments', label: 'Financials', icon: DollarSign },
-    { id: 'bookings', label: 'Scheduling', icon: Calendar },
-    { id: 'support', label: 'Communication', icon: MessageSquare },
-    { id: 'reports', label: 'Analytics', icon: FileText },
-    { id: 'providers', label: 'Services', icon: Settings },
-    { id: 'marketing', label: 'Marketing', icon: Target },
-    { id: 'people', label: 'People Command', icon: Shield },
+    { id: 'providers', label: 'Providers', icon: Shield },
+    { id: 'bookings', label: 'Bookings', icon: Calendar },
+    { id: 'payments', label: 'Payments', icon: DollarSign },
+    { id: 'support', label: 'Support', icon: MessageSquare },
+    { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
