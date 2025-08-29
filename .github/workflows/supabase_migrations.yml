@@ -1,0 +1,25 @@
+# In: .github/workflows/supabase_migrations.yml
+
+name: "Deploy Supabase Migrations"
+
+on:
+  push:
+    branches:
+      - main # This job runs every time you push code to your 'main' branch
+
+jobs:
+  deploy-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Push Database Migrations
+        run: supabase db push --password ${{ Nt12272003#911210 }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ sbp_17077130c06af921793078bdd6a13a1e750dff78 }}
